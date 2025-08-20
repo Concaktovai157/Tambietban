@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Đập hộp 3D Siêu Thật</title>
+  <style>
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background: radial-gradient(circle at top, #0f2027, #203a43, #2c5364);
+      font-family: 'Segoe UI', sans-serif;
+      flex-direction: column;
+      color: #fff;
+      overflow: hidden;
+    }
+    /* Hộp 3D */
+    .box {
+      width: 200px;
+      height: 200px;
+      position: relative;
+      transform-style: preserve-3d;
+      transform: rotateX(-15deg) rotateY(20deg);
+      animation: float 4s ease-in-out infinite;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .face {
+      position: absolute;
+      width: 200px;
+      height: 200px;
+      background: linear-gradient(145deg, #b87333, #8b5a2b);
+      border: 2px solid #663300;
+      box-shadow: inset 0 0 40px rgba(0,0,0,0.5);
+    }
+    .front  { transform: translateZ(100px); display:flex; justify-content:center; align-items:center; }
+    .back   { transform: rotateY(180deg) translateZ(100px); }
+    .right  { transform: rotateY(90deg) translateZ(100px); }
+    .left   { transform: rotateY(-90deg) translateZ(100px); }
+    .top    { transform: rotateX(90deg) translateZ(100px); transform-origin: bottom; transition: transform 1s ease; }
+    .bottom { transform: rotateX(-90deg) translateZ(100px); }
+
+    @keyframes float {
+      0%,100% { transform: rotateX(-15deg) rotateY(20deg) translateY(0); }
+      50% { transform: rotateX(-10deg) rotateY(25deg) translateY(-15px); }
+    }
+
+    .hidden { display: none; }
+    .buttons { margin-top: 20px; display: flex; gap: 20px; }
+    button {
+      padding: 12px 24px;
+      cursor: pointer;
+      border-radius: 8px;
+      border: none;
+      background: linear-gradient(90deg, #00c6ff, #0072ff);
+      color: #fff;
+      font-weight: bold;
+      font-size: 16px;
+      box-shadow: 0 0 15px rgba(0,200,255,0.7);
+      transition: all 0.3s ease;
+    }
+    button:hover {
+      transform: scale(1.1);
+      box-shadow: 0 0 25px rgba(0,200,255,1);
+    }
+
+    /* Cửa */
+    .doors { display: flex; gap: 50px; justify-content: center; align-items: center; margin-top: 20px; position: relative; width: 400px; }
+    .door {
+      width: 150px;
+      height: 250px;
+      background: linear-gradient(145deg, #555, #222);
+      border: 3px solid #111;
+      color: white;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 18px;
+      font-weight: bold;
+      border-radius: 5px;
+      box-shadow: inset 0 0 40px rgba(0,0,0,0.7);
+      transition: all 0.5s ease;
+      position: relative;
+    }
+    .door:hover {
+      transform: scale(1.05) rotateY(10deg);
+      box-shadow: 0 0 25px #0ff;
+    }
+
+    /* Cửa tách ra */
+    .door.open-left  { transform: translateX(-120px); }
+    .door.open-right { transform: translateX(120px); }
+
+    /* Ảnh di chuyển qua lại giữa 2 cửa */
+    @keyframes moveBetweenDoors {
+      0%   { left: 0; }
+      50%  { left: calc(100% - 60px); }
+      100% { left: 0; }
+    }
+    .movingImg {
+      position: absolute;
+      bottom: 20px;
+      left: 0;
+      font-size: 60px;
+      animation: moveBetweenDoors 6s linear infinite;
+    }
+    .counter {
+      position: absolute;
+      top: -30px;
+      font-size: 20px;
+      font-weight: bold;
+      color: yellow;
+    }
+
+    /* Búa */
+    .hammer {
+      position: absolute;
+      font-size: 100px;
+      top: -200px;
+      animation: smash 1s forwards;
+    }
+    @keyframes smash {
+      0% { top: -200px; transform: rotate(-30deg); }
+      80% { top: 50px; transform: rotate(0deg); }
+      100% { top: -200px; }
+    }
+
+    /* Fade to black */
+    .fadeout {
+      animation: fadeToBlack 3s forwards;
+    }
+    @keyframes fadeToBlack {
+      to { background: black; color: black; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Nhập tên -->
+  <div id="start">
+    <h2 style="color:white;">Nhập tên của bạn:</h2>
+    <input type="text" id="nameInput" placeholder="Nhập tên..." 
+           style="padding:8px; border-radius:5px; font-size:16px;">
+    <button onclick="xacNhanTen()">Xác nhận</button>
+  </div>
+
+  <div id="game" style="display:none;">
+    <div id="box" class="box">
+      <div class="face front">📦</div>
+      <div class="face back"></div>
+      <div class="face right"></div>
+      <div class="face left"></div>
+      <div class="face top" id="boxTop"></div>
+      <div class="face bottom"></div>
+    </div>
+    <div class="buttons">
+      <button onclick="dapManh()">Đập mạnh</button>
+      <button onclick="dapNhe()">Đập nhẹ</button>
+    </div>
+  </div>
+
+  <script>
+    let dapNheCount = 0;
+    let keoLaiCount = 0;
+    let vutDiCount = 0;
+    let userName = "";
+
+    function xacNhanTen() {
+      let input = document.getElementById('nameInput').value.trim();
+      if (input === "") {
+        alert("Vui lòng nhập tên!");
+        return;
+      }
+      userName = input;
+      document.getElementById('start').style.display = "none";
+      document.getElementById('game').style.display = "block";
+    }
+
+    function dapManh() {
+      let box = document.getElementById('box');
+      let hammer = document.createElement('div');
+      hammer.className = 'hammer';
+      hammer.innerHTML = '🔨';
+      document.body.appendChild(hammer);
+      setTimeout(() => {
+        box.innerHTML = '<div style="font-size:20px; color:red;">🪓💥 Hộp đã bị bạn đập nát!</div>';
+        document.querySelector('.buttons').remove();
+        hammer.remove();
+      }, 1000);
+    }
+
+    function dapNhe() {
+      dapNheCount++;
+      let box = document.getElementById('box');
+      box.animate([
+        { transform: 'translateY(0)' },
+        { transform: 'translateY(-20px)' },
+        { transform: 'translateY(0)' }
+      ], { duration: 300, iterations: 1 });
+
+      if (dapNheCount < 3) {
+        box.querySelector('.front').innerText = `🪓 Đập nhẹ lần ${dapNheCount}`;
+      } else {
+        document.getElementById('boxTop').style.transform = 'rotateX(-120deg) translateZ(100px)';
+        box.querySelector('.front').innerText = '📦 Hộp đã mở nắp';
+        document.querySelector('.buttons').remove();
+        let nut = document.createElement('button');
+        nut.innerText = 'Lấy ra';
+        nut.onclick = layRa;
+        nut.style.position = "absolute";
+        nut.style.top = "50%";
+        nut.style.left = "50%";
+        nut.style.transform = "translate(-50%, -50%)";
+        document.getElementById('game').appendChild(nut);
+      }
+    }
+
+    function layRa() {
+      let phongbi = document.createElement('div');
+      phongbi.innerText = '✉️ Phong bì';
+      phongbi.style.fontSize = '40px';
+      document.getElementById('box').innerHTML = '';
+      document.getElementById('box').appendChild(phongbi);
+      event.target.remove();
+      let nut = document.createElement('button');
+      nut.innerText = 'Mở';
+      nut.onclick = moThu;
+      nut.style.position = "absolute";
+      nut.style.top = "50%";
+      nut.style.left = "50%";
+      nut.style.transform = "translate(-50%, -50%)";
+      document.getElementById('box').appendChild(nut);
+    }
+
+    function moThu() {
+      document.getElementById('box').innerHTML = `
+        <div style="padding:20px; background:rgba(0,0,0,0.7); border:2px solid cyan; border-radius:10px; box-shadow:0 0 20px cyan;">
+          <img src="https://sf-static.upanhlaylink.com/img/image_202508204adf1ab94957f66ae551fcf38ef636c0.jpg" alt="Ảnh mặt" style="border-radius:50%; box-shadow:0 0 20px #000;"><br>
+          <span style="color:cyan;">Tên:</span> VŨ ĐỨC LẬP<br>
+          <span style="color:magenta;">Sở thích:</span> BónG RỔ<br>
+          <span style="color:lime;">Lớp:</span> 8B<br>
+          <span style="color:yellow;">Lời nói cuối:</span> Cảm ơn mọi người ĐÃ ĐỒNG HÀNH 2NĂM C2!<br>
+          <span style="color:red; font-weight:bold;">Tạm biệt BẠN ${userName}</span>
+        </div>`;
+      event.target.remove();
+      setTimeout(() => {
+        let nut = document.createElement('button');
+        nut.innerText = 'Xác nhận';
+        nut.onclick = xacNhan;
+        nut.style.position = "absolute";
+        nut.style.top = "50%";
+        nut.style.left = "50%";
+        nut.style.transform = "translate(-50%, -50%)";
+        document.getElementById('box').appendChild(nut);
+      }, 5000);
+    }
+
+    function xacNhan() {
+      document.getElementById('game').innerHTML = `
+        <div class="doors">
+          <div class="door" id="door1">
+            CLASS 8B
+            <div id="doorName" style="position:absolute; top:-30px; font-size:20px; font-weight:bold; color:yellow;">${userName}</div>
+          </div>
+          <div class="door" id="door2">CLASS 8A</div>
+        </div>
+        <div class="buttons">
+          <button onclick="keoLai()">Kéo lại</button>
+          <button onclick="vutDi()" id="vutDiBtn">Vứt đi</button>
+        </div>`;
+    }
+
+    function keoLai() {
+      keoLaiCount++;
+      let door1 = document.getElementById('door1');
+      let door2 = document.getElementById('door2');
+
+      door1.classList.add('open-left');
+      door2.classList.add('open-right');
+
+      if (!document.getElementById('hsImg')) {
+        let img = document.createElement('div');
+        img.id = 'hsImg';
+        img.className = 'movingImg';
+        img.innerText = '🧑‍🎓';
+        document.querySelector('.doors').appendChild(img);
+      }
+
+      let counter1 = door1.querySelector('.counter');
+      if (!counter1) {
+        counter1 = document.createElement('div');
+        counter1.className = 'counter';
+        door1.appendChild(counter1);
+      }
+      counter1.innerText = keoLaiCount;
+
+      let counter2 = door2.querySelector('.counter');
+      if (!counter2) {
+        counter2 = document.createElement('div');
+        counter2.className = 'counter';
+        door2.appendChild(counter2);
+      }
+      counter2.innerText = keoLaiCount;
+
+      if (keoLaiCount === 5) {
+        setTimeout(() => {
+          alert('Bạn đã không níu kéo được, lập nhà trường phải bắt đi :<');
+          document.body.classList.add('fadeout');
+        }, 2000);
+      }
+    }
+
+    function vutDi() {
+      vutDiCount++;
+      let btn = document.getElementById('vutDiBtn');
+      btn.style.transform = `scale(${1 - vutDiCount*0.15})`;
+      if (vutDiCount >= 5) {
+        btn.remove();
+      }
+    }
+  </script>
+</body>
+</html>
